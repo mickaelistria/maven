@@ -20,6 +20,7 @@ package org.apache.maven.project;
  */
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -243,6 +244,40 @@ public class ProjectBuilderTest
             assertNotNull( project );
             assertNotSame( 0, ex.getResults().get( 0 ).getProblems().size() );
         }
+    }
+
+
+    public void testReadParentAndChildWithRevisionVariable()
+        throws Exception
+    {
+        List<File> toRead = new ArrayList<>( 2 );
+        File parentPom = getProject( "bug548652" );
+		toRead.add( parentPom );
+        toRead.add( new File( parentPom.getParentFile(), "child/pom.xml" ) );
+        MavenSession mavenSession = createMavenSession( null );
+        ProjectBuildingRequest configuration = new DefaultProjectBuildingRequest();
+        configuration.setValidationLevel( ModelBuildingRequest.VALIDATION_LEVEL_MINIMAL );
+        configuration.setRepositorySession( mavenSession.getRepositorySession() );
+        org.apache.maven.project.ProjectBuilder projectBuilder =
+            lookup( org.apache.maven.project.ProjectBuilder.class );
+
+        // read poms separately
+        for ( File file : toRead ) {
+            assertResultShowNoError( projectBuilder.build( Collections.singletonList( file ), false, configuration ) );
+        }
+
+        // read projects together
+        assertResultShowNoError(  projectBuilder.build( toRead, false, configuration ) );
+        Collections.reverse( toRead );
+        assertResultShowNoError(  projectBuilder.build( toRead, false, configuration ) );
+    }
+
+    private void assertResultShowNoError(List<ProjectBuildingResult> results) {
+        for ( ProjectBuildingResult result : results ) {
+            assertTrue( result.getProblems().isEmpty() );
+            assertNotNull( result.getProject() );
+        }
+
     }
 
 }
