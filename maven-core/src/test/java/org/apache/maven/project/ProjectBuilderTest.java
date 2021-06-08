@@ -1,5 +1,16 @@
 package org.apache.maven.project;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -32,20 +43,11 @@ import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.model.building.FileModelSource;
 import org.apache.maven.model.building.ModelBuildingRequest;
+import org.apache.maven.model.building.ModelProblem;
+import org.apache.maven.model.building.ModelProblem.Severity;
 import org.apache.maven.model.building.ModelSource;
 import org.apache.maven.shared.utils.io.FileUtils;
 import org.junit.jupiter.api.Test;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.empty;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.hasKey;
-import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class ProjectBuilderTest
@@ -89,6 +91,29 @@ public class ProjectBuilderTest
 
         assertNotNull( result.getProject().getParentFile() );
     }
+
+    @Test
+    public void testBuildFromModelSourceResolvesBasedir()
+            throws Exception
+        {
+            File pomFile = new File( "src/test/resources/projects/modelsourcebasedir/pom.xml" );
+            MavenSession mavenSession = createMavenSession( null );
+            ProjectBuildingRequest configuration = new DefaultProjectBuildingRequest();
+            configuration.setRepositorySession( mavenSession.getRepositorySession() );
+            ModelSource modelSource = new FileModelSource( pomFile );
+            ProjectBuildingResult result =
+                getContainer().lookup( org.apache.maven.project.ProjectBuilder.class ).build( modelSource, configuration );
+
+            assertEquals( pomFile.getAbsoluteFile(), result.getProject().getModel().getPomFile().getAbsoluteFile() );
+            int errors = 0;
+            for (ModelProblem p : result.getProblems()) {
+            	if (p.getSeverity() == Severity.ERROR) {
+            		errors++;
+            	}
+            }
+            assertEquals( 0, errors );
+        }
+
 
     @Test
     public void testVersionlessManagedDependency()
