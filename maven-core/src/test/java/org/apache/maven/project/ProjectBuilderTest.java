@@ -36,6 +36,8 @@ import org.apache.maven.artifact.InvalidArtifactRTException;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.building.FileModelSource;
 import org.apache.maven.model.building.ModelBuildingRequest;
+import org.apache.maven.model.building.ModelProblem;
+import org.apache.maven.model.building.ModelProblem.Severity;
 import org.apache.maven.model.building.ModelSource;
 import org.apache.maven.shared.utils.io.FileUtils;
 
@@ -79,6 +81,27 @@ public class ProjectBuilderTest
             lookup( org.apache.maven.project.ProjectBuilder.class ).build( modelSource, configuration );
 
         assertNotNull( result.getProject().getParentFile() );
+    }
+
+    public void testBuildFromModelSourceResolvesBasedir()
+        throws Exception
+    {
+        File pomFile = new File( "src/test/resources/projects/modelsourcebasedir/pom.xml" );
+        MavenSession mavenSession = createMavenSession( null );
+        ProjectBuildingRequest configuration = new DefaultProjectBuildingRequest();
+        configuration.setRepositorySession( mavenSession.getRepositorySession() );
+        ModelSource modelSource = new FileModelSource( pomFile );
+        ProjectBuildingResult result =
+            getContainer().lookup( org.apache.maven.project.ProjectBuilder.class ).build( modelSource, configuration );
+
+        assertEquals( pomFile.getAbsoluteFile(), result.getProject().getModel().getPomFile().getAbsoluteFile() );
+        int errors = 0;
+        for (ModelProblem p : result.getProblems()) {
+        	if (p.getSeverity() == Severity.ERROR) {
+        		errors++;
+        	}
+        }
+        assertEquals( 0, errors );
     }
 
     public void testVersionlessManagedDependency()
